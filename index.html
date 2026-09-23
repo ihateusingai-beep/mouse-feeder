@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>喵喵餵食館</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  font-family: "PingFang HK", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  background: linear-gradient(160deg, #FFE4F1 0%, #FFE9C9 45%, #D6F5FF 100%);
+  color: #4A2C5A;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overflow: hidden;
+}
+button { font: inherit; border: none; cursor: pointer; }
+.screen { display: none; height: 100%; width: 100%; flex-direction: column; }
+.screen.on { display: flex; }
+
+/* Hub */
+.hub {
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+}
+.logo {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 900;
+  text-align: center;
+  line-height: 1.2;
+}
+.sub {
+  font-size: 1.25rem;
+  font-weight: 700;
+  opacity: .75;
+  margin-bottom: 8px;
+}
+.id-grid, .lv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 140px));
+  gap: 14px;
+  justify-content: center;
+}
+.id-card, .lv-card {
+  min-height: 110px;
+  border-radius: 22px;
+  border: 4px solid rgba(255,107,157,.35);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(74,44,90,.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 900;
+  font-size: 1.15rem;
+  transition: transform .12s, border-color .12s, box-shadow .12s;
+}
+.id-card:hover, .lv-card:hover { transform: translateY(-2px); }
+.id-card.sel, .lv-card.done {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34,197,94,.25);
+}
+.id-card .emoji, .lv-card .emoji { font-size: 2.4rem; line-height: 1; }
+.lv-card { min-height: 130px; }
+.lv-card.lock { opacity: .45; filter: grayscale(.4); cursor: not-allowed; }
+.lv-card .tag {
+  font-size: .9rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #FFE4F1;
+  color: #C2185B;
+}
+.btn {
+  min-height: 64px;
+  min-width: 180px;
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #FF6B9D, #FF9D7A);
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(255,107,157,.35);
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+.btn.ghost {
+  background: #fff;
+  color: #4A2C5A;
+  border: 3px solid rgba(74,44,90,.15);
+  box-shadow: 0 6px 16px rgba(74,44,90,.08);
+}
+.row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+/* Play */
+.topbar {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,.88);
+  border-bottom: 3px solid rgba(255,107,157,.2);
+  backdrop-filter: blur(8px);
+}
+.who {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 900; font-size: 1.15rem;
+}
+.who .av {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #fff; border: 3px solid #FF6B9D;
+  display: grid; place-items: center; font-size: 1.6rem;
+}
+.hint {
+  flex: 1;
+  text-align: center;
+  font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+  font-weight: 900;
+}
+.hint b {
+  background: #FFD54F;
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.icon-btn {
+  width: 52px; height: 52px; border-radius: 16px;
+  background: #fff; border: 3px solid rgba(74,44,90,.12);
+  font-size: 1.4rem; font-weight: 900;
+}
+.stage {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap: 16px;
+  padding: 16px;
+  min-height: 0;
+}
+.board, .side {
+  border-radius: 28px;
+  background: rgba(255,255,255,.9);
+  border: 4px solid rgba(255,107,157,.18);
+  box-shadow: 0 10px 30px rgba(74,44,90,.08);
+  position: relative;
+  overflow: hidden;
+}
+.board {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,213,79,.25), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(182,224,255,.45), transparent 45%),
+    rgba(255,255,255,.92);
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px;
+  background: linear-gradient(180deg, #FFF8E7, #FFE8F1);
+}
+.cat-wrap { text-align: center; width: 100%; }
+.cat {
+  font-size: clamp(5rem, 14vw, 8rem);
+  line-height: 1;
+  transition: transform .25s;
+  filter: drop-shadow(0 8px 12px rgba(0,0,0,.12));
+}
+.cat.happy { animation: bounce .55s ease; }
+.cat.eat { animation: munch .45s ease; }
+@keyframes bounce {
+  0%,100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-18px) scale(1.08); }
+  70% { transform: translateY(0) scale(.98); }
+}
+@keyframes munch {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.12) rotate(-4deg); }
+}
+.bowl {
+  width: min(86%, 280px);
+  height: 120px;
+  margin: 8px auto 0;
+  border-radius: 0 0 70px 70px;
+  background: linear-gradient(180deg, #fff 0%, #FFD6E7 100%);
+  border: 5px solid #FF6B9D;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px;
+  position: relative;
+}
+.bowl.on {
+  box-shadow: 0 0 0 6px rgba(34,197,94,.28), 0 0 24px rgba(34,197,94,.35);
+  border-color: #22c55e;
+}
+.bowl .food { font-size: 2rem; }
+.meter {
+  width: 100%;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(74,44,90,.1);
+  overflow: hidden;
+  margin-top: 12px;
+}
+.meter > i {
+  display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, #69F0AE, #00E5FF);
+  transition: width .25s ease;
+}
+.item {
+  position: absolute;
+  width: 110px; height: 110px;
+  border-radius: 28px;
+  background: #fff;
+  border: 5px solid #FF9D7A;
+  display: grid; place-items: center;
+  font-size: 3.4rem;
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+.item.pulse {
+  animation: pulse 1.1s ease-in-out infinite;
+}
+.item.ghost {
+  opacity: .35;
+  filter: grayscale(.3);
+  pointer-events: none;
+}
+.item.dragging {
+  z-index: 20;
+  transform: scale(1.08);
+  box-shadow: 0 16px 36px rgba(0,0,0,.22);
+  border-color: #4FC3F7;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,107,157,.55), 0 10px 24px rgba(0,0,0,.12); transform: scale(1); }
+  50% { box-shadow: 0 0 0 14px rgba(255,107,157,0), 0 10px 24px rgba(0,0,0,.12); transform: scale(1.06); }
+}
+.box-closed, .box-open {
+  width: 160px; height: 140px;
+  border-radius: 24px;
+  display: grid; place-items: center;
+  font-size: 4.5rem;
+  border: 5px solid #B388FF;
+  background: linear-gradient(160deg, #F3E8FF, #E8F4FD);
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+}
+.box-closed.pulse { animation: pulse 1.1s ease-in-out infinite; cursor: context-menu; }
+.guide {
+  position: absolute;
+  left: 16px; top: 16px;
+  background: rgba(255,255,255,.95);
+  border: 3px solid #FFD54F;
+  border-radius: 18px;
+  padding: 10px 14px;
+  font-weight: 900;
+  font-size: 1.1rem;
+  max-width: 240px;
+  z-index: 5;
+}
+.toast {
+  position: fixed;
+  left: 50%; top: 18%;
+  transform: translateX(-50%) scale(.9);
+  background: #fff;
+  border: 4px solid #22c55e;
+  color: #166534;
+  font-size: 1.6rem;
+  font-weight: 900;
+  padding: 14px 28px;
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: .2s;
+  z-index: 50;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
+.toast.bad { border-color: #FF6B9D; color: #9f1239; }
+
+/* Win overlay */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(74,44,90,.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 20px;
+}
+.overlay.on { display: flex; }
+.modal {
+  width: min(520px, 96vw);
+  background: #fff;
+  border-radius: 32px;
+  border: 5px solid #FFD54F;
+  padding: 28px 22px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+.modal h2 { font-size: 2.2rem; margin-bottom: 8px; }
+.modal p { font-size: 1.25rem; font-weight: 700; margin-bottom: 18px; opacity: .8; }
+.stars { font-size: 2.6rem; letter-spacing: 6px; margin-bottom: 10px; }
+.confetti {
+  position: fixed; inset: 0; pointer-events: none; z-index: 55; overflow: hidden;
+}
+.confetti i {
+  position: absolute; top: -20px; width: 12px; height: 18px; border-radius: 3px;
+  animation: fall linear forwards;
+}
+@keyframes fall {
+  to { transform: translateY(110vh) rotate(720deg); opacity: .85; }
+}
+
+.teacher {
+  position: fixed; right: 12px; bottom: 12px; z-index: 40;
+}
+.teacher details {
+  background: rgba(255,255,255,.95);
+  border: 3px solid rgba(74,44,90,.15);
+  border-radius: 16px;
+  padding: 8px 12px;
+  min-width: 180px;
+  font-size: .95rem;
+  font-weight: 700;
+}
+.teacher summary { cursor: pointer; list-style: none; }
+.teacher label { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+
+@media (max-width: 900px) {
+  .stage { grid-template-columns: 1fr; grid-template-rows: 1.2fr .8fr; }
+  .id-grid, .lv-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); width: min(420px, 92vw); }
+}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div id="confetti" class="confetti" aria-hidden="true"></div>
+
+<!-- Identity -->
+<section id="s-id" class="screen on hub">
+  <div class="logo">🐱 喵喵餵食館</div>
+  <div class="sub">揀你嘅身份卡</div>
+  <div class="id-grid" id="idGrid"></div>
+  <button class="btn" id="btnToLevels" disabled>去餵貓</button>
+</section>
+
+<!-- Levels -->
+<section id="s-lv" class="screen hub">
+  <div class="logo">選關卡</div>
+  <div class="sub" id="lvWho"></div>
+  <div class="lv-grid" id="lvGrid"></div>
+  <div class="row">
+    <button class="btn ghost" id="btnBackId">返身份卡</button>
+  </div>
+</section>
+
+<!-- Play -->
+<section id="s-play" class="screen">
+  <div class="topbar">
+    <div class="who"><div class="av" id="playAv">🐱</div><span id="playName">同學</span></div>
+    <div class="hint" id="playHint">撳 <b>魚</b></div>
+    <div class="row">
+      <button class="icon-btn" id="btnSpeak" title="讀">🔊</button>
+      <button class="icon-btn" id="btnHome" title="返">🏠</button>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="board" id="board">
+      <div class="guide" id="guide">用滑鼠左掣撳魚</div>
+    </div>
+    <div class="side">
+      <div class="cat-wrap">
+        <div class="cat" id="cat">😺</div>
+        <div class="bowl" id="bowl"><span class="food" id="bowlFood"></span></div>
+        <div class="meter"><i id="meterFill"></i></div>
+      </div>
+      <div style="font-weight:900;font-size:1.2rem" id="sideLabel">肚餓中…</div>
+    </div>
+  </div>
+</section>
+
+<!-- Win -->
+<div class="overlay" id="win">
+  <div class="modal">
+    <div class="stars" id="winStars">⭐⭐⭐</div>
+    <h2 id="winTitle">做得好！</h2>
+    <p id="winMsg">貓貓食飽啦</p>
+    <div class="row">
+      <button class="btn ghost" id="btnRetry">再玩</button>
+      <button class="btn" id="btnNext">下一關</button>
+      <button class="btn ghost" id="btnToMap">關卡</button>
+    </div>
+  </div>
+</div>
+
+<div class="teacher">
+  <details>
+    <summary>老師角</summary>
+    <label><input type="checkbox" id="chkGuide" checked> 顯示提示</label>
+    <label><input type="checkbox" id="chkTts" checked> 讀字</label>
+    <label><input type="checkbox" id="chkSfx" checked> 音效</label>
+  </details>
+</div>
+
+<script>
+(() => {
+  // SEN hard rules
+  document.addEventListener('contextmenu', (e) => {
+    // Allow only intentional right-click targets; always block browser menu
+    e.preventDefault();
+  });
+  document.addEventListener('selectstart', (e) => e.preventDefault());
+  document.addEventListener('dragstart', (e) => {
+    if (!e.target.closest || !e.target.closest('.item')) e.preventDefault();
+  });
+
+  const IDS = [
+    { id: 'cat', emoji: '🐱', name: '小貓' },
+    { id: 'dog', emoji: '🐶', name: '小狗' },
+    { id: 'bear', emoji: '🐻', name: '小熊' },
+    { id: 'rabbit', emoji: '🐰', name: '小兔' },
+    { id: 'panda', emoji: '🐼', name: '熊貓' },
+    { id: 'fox', emoji: '🦊', name: '小狐' },
+    { id: 'chick', emoji: '🐥', name: '小雞' },
+    { id: 'star', emoji: '⭐', name: '星星' },
+  ];
+
+  const LEVELS = [
+    {
+      id: 1,
+      name: '撳一撳',
+      tag: '左掣',
+      emoji: '👆',
+      hint: '撳 <b>魚</b>',
+      guide: '用滑鼠左掣撳魚',
+      speak: '撳魚',
+      need: 3,
+      type: 'click'
+    },
+    {
+      id: 2,
+      name: '拖一拖',
+      tag: '拖曳',
+      emoji: '✋',
+      hint: '拖 <b>魚</b> 去碗',
+      guide: '按住左掣，拖魚去碗',
+      speak: '拖魚去碗',
+      need: 3,
+      type: 'drag'
+    },
+    {
+      id: 3,
+      name: '開盒仔',
+      tag: '右掣',
+      emoji: '🖱️',
+      hint: '右掣開 <b>盒</b>',
+      guide: '用滑鼠右掣撳盒仔',
+      speak: '右掣開盒',
+      need: 3,
+      type: 'right'
+    },
+    {
+      id: 4,
+      name: '餵飽貓',
+      tag: '混合',
+      emoji: '🍽️',
+      hint: '撳 · 拖 · 右掣',
+      guide: '跟住發光嘅嘢做',
+      speak: '餵飽貓',
+      need: 3,
+      type: 'mix'
+    }
+  ];
+
+  const state = {
+    who: null,
+    level: null,
+    progress: 0,
+    done: JSON.parse(localStorage.getItem('mouse_feeder_done') || '{}'),
+    mixStep: 0, // 0 click, 1 drag, 2 right
+    dragging: null
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const toastEl = $('toast');
+  const board = $('board');
+  const bowl = $('bowl');
+  const cat = $('cat');
+  const meterFill = $('meterFill');
+  const bowlFood = $('bowlFood');
+  const sideLabel = $('sideLabel');
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+    $(id).classList.add('on');
+  }
+
+  function toast(msg, bad = false) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('bad', bad);
+    toastEl.classList.add('show');
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove('show'), 1200);
+  }
+
+  // Audio
+  let audioCtx = null;
+  function ctx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur = 0.12, type = 'sine', vol = 0.2) {
+    if (!$('chkSfx').checked) return;
+    try {
+      const c = ctx();
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(); o.stop(c.currentTime + dur);
+    } catch (_) {}
+  }
+  function sfxOk() { tone(523, .1); setTimeout(() => tone(659, .1), 80); setTimeout(() => tone(784, .14), 160); }
+  function sfxWin() { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.18,'triangle',.22), i*90)); }
+  function sfxBad() { tone(180, .16, 'square', .1); }
+
+  function speak(text) {
+    if (!$('chkTts').checked || !text) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-HK';
+      u.rate = 0.9;
+      const vs = speechSynthesis.getVoices();
+      const v = vs.find(x => /zh(-|_)?HK|yue|cantonese/i.test(x.lang + x.name))
+        || vs.find(x => /zh|chinese/i.test(x.lang + x.name));
+      if (v) u.voice = v;
+      speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
+  function confettiBurst() {
+    const box = $('confetti');
+    box.innerHTML = '';
+    const colors = ['#FF6B9D','#FFD54F','#69F0AE','#4FC3F7','#B388FF','#FF9D7A'];
+    for (let i = 0; i < 36; i++) {
+      const el = document.createElement('i');
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.background = colors[i % colors.length];
+      el.style.animationDuration = (1.2 + Math.random() * 1.4) + 's';
+      el.style.animationDelay = (Math.random() * .3) + 's';
+      box.appendChild(el);
+    }
+    setTimeout(() => { box.innerHTML = ''; }, 2800);
+  }
+
+  // Identity
+  function renderIds() {
+    const g = $('idGrid');
+    g.innerHTML = '';
+    IDS.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'id-card' + (state.who?.id === p.id ? ' sel' : '');
+      b.innerHTML = `<span class="emoji">${p.emoji}</span><span>${p.name}</span>`;
+      b.onclick = () => {
+        state.who = p;
+        renderIds();
+        $('btnToLevels').disabled = false;
+        tone(660, .08);
+        speak(p.name);
+      };
+      g.appendChild(b);
+    });
+  }
+
+  function unlocked(lvId) {
+    if (lvId === 1) return true;
+    return !!state.done[lvId - 1];
+  }
+
+  function renderLevels() {
+    $('lvWho').textContent = state.who ? `${state.who.emoji} ${state.who.name}，嚟餵貓啦` : '';
+    const g = $('lvGrid');
+    g.innerHTML = '';
+    LEVELS.forEach(lv => {
+      const open = unlocked(lv.id);
+      const b = document.createElement('button');
+      b.className = 'lv-card' + (state.done[lv.id] ? ' done' : '') + (open ? '' : ' lock');
+      b.innerHTML = `<span class="emoji">${lv.emoji}</span><span>${lv.name}</span><span class="tag">${lv.tag}${state.done[lv.id] ? ' ✓' : ''}</span>`;
+      b.onclick = () => {
+        if (!open) { toast('先完成上一關', true); sfxBad(); return; }
+        startLevel(lv.id);
+      };
+      g.appendChild(b);
+    });
+  }
+
+  function setProgress(n, need) {
+    state.progress = n;
+    const pct = Math.min(100, (n / need) * 100);
+    meterFill.style.width = pct + '%';
+    const foods = ['🐟','🥛','🍪','🐟','🥛','🍪'];
+    bowlFood.textContent = foods.slice(0, n).join('');
+    sideLabel.textContent = n >= need ? '食飽啦！' : `仲差 ${need - n} 次`;
+  }
+
+  function clearBoard() {
+    board.querySelectorAll('.item, .box-closed, .box-open, .guide').forEach(el => {
+      if (el.id !== 'guide') el.remove();
+    });
+    // keep guide node
+    if (!$('guide')) {
+      const g = document.createElement('div');
+      g.className = 'guide'; g.id = 'guide';
+      board.appendChild(g);
+    }
+  }
+
+  function placeItem(emoji, x, y, extraClass = '') {
+    const el = document.createElement('div');
+    el.className = 'item pulse ' + extraClass;
+    el.textContent = emoji;
+    el.style.left = x;
+    el.style.top = y;
+    board.appendChild(el);
+    return el;
+  }
+
+  function showGuide(text) {
+    const g = $('guide');
+    g.textContent = text;
+    g.style.display = $('chkGuide').checked ? 'block' : 'none';
+  }
+
+  function startLevel(id) {
+    const lv = LEVELS.find(x => x.id === id);
+    state.level = lv;
+    state.progress = 0;
+    state.mixStep = 0;
+    state.dragging = null;
+    $('win').classList.remove('on');
+    $('playAv').textContent = state.who?.emoji || '🐱';
+    $('playName').textContent = state.who?.name || '同學';
+    $('playHint').innerHTML = lv.hint;
+    cat.textContent = '😺';
+    cat.className = 'cat';
+    bowl.classList.remove('on');
+    setProgress(0, lv.need);
+    showScreen('s-play');
+    showGuide(lv.guide);
+    speak(lv.speak);
+    buildLevel();
+  }
+
+  function buildLevel() {
+    clearBoard();
+    showGuide(state.level.guide);
+    const t = state.level.type;
+    if (t === 'click') buildClick();
+    else if (t === 'drag') buildDrag();
+    else if (t === 'right') buildRight();
+    else buildMix();
+  }
+
+  function succeedOnce(foodEmoji) {
+    sfxOk();
+    cat.classList.remove('eat');
+    void cat.offsetWidth;
+    cat.classList.add('eat');
+    cat.textContent = '😻';
+    bowl.classList.add('on');
+    setTimeout(() => bowl.classList.remove('on'), 500);
+    const next = state.progress + 1;
+    // visual food
+    const foods = Array.from(bowlFood.textContent);
+    // handled in setProgress
+    setProgress(next, state.level.need);
+    toast('好！+' + (foodEmoji || '⭐'));
+    if (next >= state.level.need) {
+      setTimeout(winLevel, 450);
+    } else {
+      setTimeout(() => {
+        cat.textContent = '😺';
+        buildLevel();
+      }, 420);
+    }
+  }
+
+  function buildClick() {
+    const positions = [
+      ['18%', '22%'], ['55%', '28%'], ['30%', '55%'], ['62%', '58%'], ['40%', '35%']
+    ];
+    const [x, y] = positions[state.progress % positions.length];
+    // decoys
+    if (state.progress > 0) {
+      const decoy = placeItem('🧸', '70%', '18%');
+      decoy.classList.remove('pulse');
+      decoy.style.borderColor = '#ccc';
+      decoy.onclick = () => { sfxBad(); toast('撳魚呀', true); speak('撳魚'); };
+    }
+    const fish = placeItem('🐟', x, y);
+    fish.onclick = (e) => {
+      if (e.button !== 0) return;
+      fish.remove();
+      succeedOnce('🐟');
+    };
+  }
+
+  function buildDrag() {
+    const fish = placeItem('🐟', '20%', '30%');
+    bowl.classList.add('on');
+    enableDrag(fish, () => {
+      fish.remove();
+      succeedOnce('🐟');
+    });
+  }
+
+  function enableDrag(el, onDropOk) {
+    let ox = 0, oy = 0, dragging = false;
+
+    const cleanup = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+
+    const onDown = (e) => {
+      if (e.button != null && e.button !== 0) return;
+      e.preventDefault();
+      dragging = true;
+      el.classList.add('dragging');
+      el.classList.remove('pulse');
+      const r = el.getBoundingClientRect();
+      const br = board.getBoundingClientRect();
+      ox = (e.clientX ?? e.touches?.[0]?.clientX) - r.left;
+      oy = (e.clientY ?? e.touches?.[0]?.clientY) - r.top;
+      el.style.left = (r.left - br.left) + 'px';
+      el.style.top = (r.top - br.top) + 'px';
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      move(e);
+    };
+    const move = (e) => {
+      if (!dragging) return;
+      const pt = e.touches ? e.touches[0] : e;
+      if (!pt) return;
+      const br = board.getBoundingClientRect();
+      let nx = pt.clientX - br.left - ox;
+      let ny = pt.clientY - br.top - oy;
+      nx = Math.max(0, Math.min(br.width - el.offsetWidth, nx));
+      ny = Math.max(0, Math.min(br.height - el.offsetHeight, ny));
+      el.style.left = nx + 'px';
+      el.style.top = ny + 'px';
+    };
+    const up = () => {
+      if (!dragging) return;
+      dragging = false;
+      el.classList.remove('dragging');
+      cleanup();
+      const er = el.getBoundingClientRect();
+      const wr = bowl.getBoundingClientRect();
+      const hit = !(er.right < wr.left || er.left > wr.right || er.bottom < wr.top || er.top > wr.bottom);
+      if (hit) onDropOk();
+      else {
+        sfxBad();
+        toast('拖去碗', true);
+        el.classList.add('pulse');
+        el.style.left = '20%';
+        el.style.top = '30%';
+        speak('拖去碗');
+      }
+    };
+
+    el.addEventListener('pointerdown', onDown);
+  }
+
+  function buildRight() {
+    const box = document.createElement('div');
+    box.className = 'box-closed pulse';
+    box.textContent = '📦';
+    box.style.position = 'absolute';
+    box.style.left = '38%';
+    box.style.top = '32%';
+    board.appendChild(box);
+
+    // left click = gentle wrong cue
+    box.addEventListener('click', (e) => {
+      e.preventDefault();
+      sfxBad();
+      toast('要用右掣', true);
+      speak('右掣');
+    });
+    box.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      box.className = 'box-open';
+      box.textContent = '🍪';
+      tone(880, .1);
+      setTimeout(() => {
+        box.remove();
+        succeedOnce('🍪');
+      }, 280);
+    });
+  }
+
+  function buildMix() {
+    const step = state.mixStep % 3;
+    if (step === 0) {
+      $('playHint').innerHTML = '撳 <b>魚</b>';
+      showGuide('第一步：左掣撳魚');
+      speak('撳魚');
+      const fish = placeItem('🐟', '25%', '35%');
+      fish.onclick = () => { fish.remove(); state.mixStep = 1; succeedOnce('🐟'); };
+    } else if (step === 1) {
+      $('playHint').innerHTML = '拖 <b>奶</b> 去碗';
+      showGuide('第二步：拖牛奶去碗');
+      speak('拖去碗');
+      const milk = placeItem('🥛', '22%', '28%');
+      bowl.classList.add('on');
+      enableDrag(milk, () => { milk.remove(); state.mixStep = 2; succeedOnce('🥛'); });
+    } else {
+      $('playHint').innerHTML = '右掣開 <b>盒</b>';
+      showGuide('第三步：右掣開盒');
+      speak('右掣開盒');
+      const box = document.createElement('div');
+      box.className = 'box-closed pulse';
+      box.textContent = '📦';
+      box.style.position = 'absolute';
+      box.style.left = '40%';
+      box.style.top = '30%';
+      board.appendChild(box);
+      box.addEventListener('click', () => { sfxBad(); toast('右掣呀', true); });
+      box.addEventListener('contextmenu', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        box.className = 'box-open'; box.textContent = '🍪';
+        setTimeout(() => { box.remove(); state.mixStep = 0; succeedOnce('🍪'); }, 250);
+      });
+    }
+  }
+
+  function winLevel() {
+    sfxWin();
+    confettiBurst();
+    cat.textContent = '😻';
+    cat.classList.add('happy');
+    state.done[state.level.id] = true;
+    localStorage.setItem('mouse_feeder_done', JSON.stringify(state.done));
+    $('winStars').textContent = '⭐⭐⭐';
+    $('winTitle').textContent = '得唔得！';
+    $('winMsg').textContent = `${state.level.name} 完成 · ${state.level.tag}`;
+    $('win').classList.add('on');
+    speak('做得好');
+    const next = LEVELS.find(l => l.id === state.level.id + 1);
+    $('btnNext').style.display = next ? '' : 'none';
+  }
+
+  // Events
+  $('btnToLevels').onclick = () => { renderLevels(); showScreen('s-lv'); speak('選關卡'); };
+  $('btnBackId').onclick = () => showScreen('s-id');
+  $('btnHome').onclick = () => { $('win').classList.remove('on'); renderLevels(); showScreen('s-lv'); };
+  $('btnSpeak').onclick = () => speak(state.level?.speak || '喵喵餵食館');
+  $('btnRetry').onclick = () => startLevel(state.level.id);
+  $('btnNext').onclick = () => {
+    const n = state.level.id + 1;
+    if (LEVELS.find(l => l.id === n)) startLevel(n);
+    else { renderLevels(); showScreen('s-lv'); }
+  };
+  $('btnToMap').onclick = () => { $('win').classList.remove('on'); renderLevels(); showScreen('s-lv'); };
+  $('chkGuide').onchange = () => {
+    const g = $('guide');
+    if (g) g.style.display = $('chkGuide').checked ? 'block' : 'none';
+  };
+
+  // boot
+  renderIds();
+  // unlock audio on first gesture
+  window.addEventListener('pointerdown', () => { try { ctx(); } catch(_){} }, { once: true });
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = () => {};
+  }
+})();
+</script>
+</body>
+</html>
