@@ -185,10 +185,11 @@ button { font: inherit; border: none; cursor: pointer; }
   50% { transform: scale(1.12) rotate(-4deg); }
 }
 .bowl {
-  width: min(86%, 280px);
-  height: 120px;
+  width: min(92%, 300px);
+  min-height: 150px;
+  height: 150px;
   margin: 8px auto 0;
-  border-radius: 0 0 70px 70px;
+  border-radius: 0 0 80px 80px;
   background: linear-gradient(180deg, #fff 0%, #FFD6E7 100%);
   border: 5px solid #FF6B9D;
   display: flex;
@@ -197,11 +198,28 @@ button { font: inherit; border: none; cursor: pointer; }
   gap: 4px;
   padding: 10px;
   position: relative;
+  transition: box-shadow .15s, border-color .15s, transform .15s;
 }
-.bowl.on {
-  box-shadow: 0 0 0 6px rgba(34,197,94,.28), 0 0 24px rgba(34,197,94,.35);
+.bowl.on, .bowl.hot {
+  box-shadow: 0 0 0 8px rgba(34,197,94,.32), 0 0 28px rgba(34,197,94,.4);
   border-color: #22c55e;
+  transform: scale(1.04);
 }
+.bowl-label {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22c55e;
+  color: #fff;
+  font-weight: 900;
+  font-size: .95rem;
+  padding: 2px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  display: none;
+}
+.bowl.drop-ready .bowl-label { display: block; }
 .bowl .food { font-size: 2rem; }
 .meter {
   width: 100%;
@@ -384,7 +402,7 @@ button { font: inherit; border: none; cursor: pointer; }
     <div class="side">
       <div class="cat-wrap">
         <div class="cat" id="cat">😺</div>
-        <div class="bowl" id="bowl"><span class="food" id="bowlFood"></span></div>
+        <div class="bowl" id="bowl"><span class="bowl-label">放呢度</span><span class="food" id="bowlFood"></span></div>
         <div class="meter"><i id="meterFill"></i></div>
       </div>
       <div style="font-weight:900;font-size:1.2rem" id="sideLabel">肚餓中…</div>
@@ -456,7 +474,7 @@ button { font: inherit; border: none; cursor: pointer; }
       tag: '拖曳',
       emoji: '✋',
       hint: '拖 <b>魚</b> 去碗',
-      guide: '按住左掣，拖魚去碗',
+      guide: '按住左掣，拖魚去右邊碗',
       speak: '拖魚去碗',
       need: 3,
       type: 'drag'
@@ -661,7 +679,7 @@ button { font: inherit; border: none; cursor: pointer; }
     $('playHint').innerHTML = lv.hint;
     cat.textContent = '😺';
     cat.className = 'cat';
-    bowl.classList.remove('on');
+    bowl.classList.remove('on', 'hot', 'drop-ready');
     setProgress(0, lv.need);
     showScreen('s-play');
     showGuide(lv.guide);
@@ -724,71 +742,113 @@ button { font: inherit; border: none; cursor: pointer; }
   }
 
   function buildDrag() {
-    const fish = placeItem('🐟', '20%', '30%');
-    bowl.classList.add('on');
+    const fish = placeItem('🐟', '18%', '28%');
+    bowl.classList.add('on', 'drop-ready');
     enableDrag(fish, () => {
       fish.remove();
+      bowl.classList.remove('hot', 'drop-ready');
       succeedOnce('🐟');
     });
+  }
+
+  /** Generous bowl hit: center of item inside expanded bowl box (pad 72px). */
+  function hitsBowl(el) {
+    const er = el.getBoundingClientRect();
+    const wr = bowl.getBoundingClientRect();
+    const pad = 72;
+    const cx = (er.left + er.right) / 2;
+    const cy = (er.top + er.bottom) / 2;
+    return cx >= wr.left - pad && cx <= wr.right + pad &&
+           cy >= wr.top - pad && cy <= wr.bottom + pad;
   }
 
   function enableDrag(el, onDropOk) {
     let ox = 0, oy = 0, dragging = false;
 
-    const cleanup = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
+    const detachMove = () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+
+    const resetPos = () => {
+      el.classList.remove('dragging');
+      el.style.position = 'absolute';
+      el.style.zIndex = '';
+      el.style.left = '18%';
+      el.style.top = '28%';
+      el.style.right = '';
+      el.style.bottom = '';
+      el.classList.add('pulse');
+      bowl.classList.remove('hot');
     };
 
     const onDown = (e) => {
       if (e.button != null && e.button !== 0) return;
       e.preventDefault();
+      e.stopPropagation();
       dragging = true;
       el.classList.add('dragging');
       el.classList.remove('pulse');
       const r = el.getBoundingClientRect();
-      const br = board.getBoundingClientRect();
-      ox = (e.clientX ?? e.touches?.[0]?.clientX) - r.left;
-      oy = (e.clientY ?? e.touches?.[0]?.clientY) - r.top;
-      el.style.left = (r.left - br.left) + 'px';
-      el.style.top = (r.top - br.top) + 'px';
+      ox = e.clientX - r.left;
+      oy = e.clientY - r.top;
+      // fixed = can leave left board and reach right-side bowl
+      el.style.position = 'fixed';
+      el.style.left = r.left + 'px';
+      el.style.top = r.top + 'px';
+      el.style.zIndex = '200';
       try { el.setPointerCapture(e.pointerId); } catch (_) {}
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-      move(e);
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+      el.addEventListener('pointercancel', onUp);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+      onMove(e);
     };
-    const move = (e) => {
+
+    const onMove = (e) => {
       if (!dragging) return;
-      const pt = e.touches ? e.touches[0] : e;
-      if (!pt) return;
-      const br = board.getBoundingClientRect();
-      let nx = pt.clientX - br.left - ox;
-      let ny = pt.clientY - br.top - oy;
-      nx = Math.max(0, Math.min(br.width - el.offsetWidth, nx));
-      ny = Math.max(0, Math.min(br.height - el.offsetHeight, ny));
+      if (e.clientX == null && !e.touches) return;
+      const x = e.clientX ?? e.touches?.[0]?.clientX;
+      const y = e.clientY ?? e.touches?.[0]?.clientY;
+      if (x == null || y == null) return;
+      let nx = x - ox;
+      let ny = y - oy;
+      const maxX = window.innerWidth - el.offsetWidth;
+      const maxY = window.innerHeight - el.offsetHeight;
+      nx = Math.max(0, Math.min(maxX, nx));
+      ny = Math.max(0, Math.min(maxY, ny));
       el.style.left = nx + 'px';
       el.style.top = ny + 'px';
+      if (hitsBowl(el)) bowl.classList.add('hot', 'on');
+      else {
+        bowl.classList.remove('hot');
+        if (state.level?.type === 'drag' || state.mixStep === 1) bowl.classList.add('on');
+      }
     };
-    const up = () => {
+
+    const onUp = (e) => {
       if (!dragging) return;
       dragging = false;
-      el.classList.remove('dragging');
-      cleanup();
-      const er = el.getBoundingClientRect();
-      const wr = bowl.getBoundingClientRect();
-      const hit = !(er.right < wr.left || er.left > wr.right || er.bottom < wr.top || er.top > wr.bottom);
-      if (hit) onDropOk();
-      else {
+      detachMove();
+      try { if (e && e.pointerId != null) el.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (hitsBowl(el)) {
+        onDropOk();
+      } else {
         sfxBad();
-        toast('拖去碗', true);
-        el.classList.add('pulse');
-        el.style.left = '20%';
-        el.style.top = '30%';
+        toast('拖去右邊碗', true);
         speak('拖去碗');
+        resetPos();
       }
     };
 
     el.addEventListener('pointerdown', onDown);
+    el.style.cursor = 'grab';
   }
 
   function buildRight() {
@@ -830,11 +890,16 @@ button { font: inherit; border: none; cursor: pointer; }
       fish.onclick = () => { fish.remove(); state.mixStep = 1; succeedOnce('🐟'); };
     } else if (step === 1) {
       $('playHint').innerHTML = '拖 <b>奶</b> 去碗';
-      showGuide('第二步：拖牛奶去碗');
+      showGuide('第二步：拖牛奶去右邊碗');
       speak('拖去碗');
-      const milk = placeItem('🥛', '22%', '28%');
-      bowl.classList.add('on');
-      enableDrag(milk, () => { milk.remove(); state.mixStep = 2; succeedOnce('🥛'); });
+      const milk = placeItem('🥛', '18%', '28%');
+      bowl.classList.add('on', 'drop-ready');
+      enableDrag(milk, () => {
+        milk.remove();
+        bowl.classList.remove('hot', 'drop-ready');
+        state.mixStep = 2;
+        succeedOnce('🥛');
+      });
     } else {
       $('playHint').innerHTML = '右掣開 <b>盒</b>';
       showGuide('第三步：右掣開盒');
