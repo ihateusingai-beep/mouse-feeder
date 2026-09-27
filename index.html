@@ -484,8 +484,8 @@ button { font: inherit; border: none; cursor: pointer; }
       name: '開盒仔',
       tag: '右掣',
       emoji: '🖱️',
-      hint: '右掣開 <b>盒</b>',
-      guide: '用滑鼠右掣撳盒仔',
+      hint: '右掣／兩指 開 <b>盒</b>',
+      guide: '兩指撳盒＝右掣（或 Control+撳）',
       speak: '右掣開盒',
       need: 3,
       type: 'right'
@@ -851,33 +851,89 @@ button { font: inherit; border: none; cursor: pointer; }
     el.style.cursor = 'grab';
   }
 
+  function openRightBox(box, onDone) {
+    if (!box || box.dataset.opened === '1') return;
+    box.dataset.opened = '1';
+    box.className = 'box-open';
+    box.textContent = '🍪';
+    tone(880, .1);
+    setTimeout(() => {
+      try { box.remove(); } catch (_) {}
+      onDone();
+    }, 260);
+  }
+
+  /**
+   * Trackpad/mouse right-click: button2 pointer/mouse + contextmenu + ctrl-click + auxclick.
+   * Mac two-finger click often only reliably fires contextmenu; some only button2 down.
+   */
+  function bindRightOpen(el, onDone) {
+    let opened = false;
+    let suppressClickUntil = 0;
+
+    const succeed = (e) => {
+      if (opened) return;
+      opened = true;
+      suppressClickUntil = Date.now() + 600;
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      openRightBox(el, onDone);
+    };
+
+    // capture so we win over document bubble preventDefault races
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button === 2 || e.ctrlKey) succeed(e);
+    }, true);
+
+    el.addEventListener('mousedown', (e) => {
+      if (e.button === 2 || e.ctrlKey) succeed(e);
+    }, true);
+
+    el.addEventListener('contextmenu', (e) => {
+      succeed(e);
+    }, true);
+
+    el.addEventListener('auxclick', (e) => {
+      if (e.button === 2) succeed(e);
+    }, true);
+
+    el.addEventListener('click', (e) => {
+      if (opened || Date.now() < suppressClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      // Mac: Control + 左掣 = 右掣
+      if (e.ctrlKey || e.metaKey) {
+        succeed(e);
+        return;
+      }
+      // plain left click = wrong for this level
+      if (e.button === 0) {
+        e.preventDefault();
+        sfxBad();
+        toast('兩指撳／右掣', true);
+        speak('右掣');
+      }
+    }, true);
+
+    // big hit target for SEN + trackpad aim
+    el.style.minWidth = '180px';
+    el.style.minHeight = '160px';
+    el.style.cursor = 'context-menu';
+  }
+
   function buildRight() {
     const box = document.createElement('div');
     box.className = 'box-closed pulse';
     box.textContent = '📦';
     box.style.position = 'absolute';
-    box.style.left = '38%';
-    box.style.top = '32%';
+    box.style.left = '34%';
+    box.style.top = '28%';
     board.appendChild(box);
-
-    // left click = gentle wrong cue
-    box.addEventListener('click', (e) => {
-      e.preventDefault();
-      sfxBad();
-      toast('要用右掣', true);
-      speak('右掣');
-    });
-    box.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      box.className = 'box-open';
-      box.textContent = '🍪';
-      tone(880, .1);
-      setTimeout(() => {
-        box.remove();
-        succeedOnce('🍪');
-      }, 280);
-    });
+    bindRightOpen(box, () => succeedOnce('🍪'));
   }
 
   function buildMix() {
@@ -901,21 +957,19 @@ button { font: inherit; border: none; cursor: pointer; }
         succeedOnce('🥛');
       });
     } else {
-      $('playHint').innerHTML = '右掣開 <b>盒</b>';
-      showGuide('第三步：右掣開盒');
+      $('playHint').innerHTML = '右掣／兩指 開 <b>盒</b>';
+      showGuide('第三步：兩指撳盒＝右掣');
       speak('右掣開盒');
       const box = document.createElement('div');
       box.className = 'box-closed pulse';
       box.textContent = '📦';
       box.style.position = 'absolute';
-      box.style.left = '40%';
-      box.style.top = '30%';
+      box.style.left = '36%';
+      box.style.top = '28%';
       board.appendChild(box);
-      box.addEventListener('click', () => { sfxBad(); toast('右掣呀', true); });
-      box.addEventListener('contextmenu', (e) => {
-        e.preventDefault(); e.stopPropagation();
-        box.className = 'box-open'; box.textContent = '🍪';
-        setTimeout(() => { box.remove(); state.mixStep = 0; succeedOnce('🍪'); }, 250);
+      bindRightOpen(box, () => {
+        state.mixStep = 0;
+        succeedOnce('🍪');
       });
     }
   }
