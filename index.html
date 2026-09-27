@@ -1370,6 +1370,32 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
   };
 
   // boot
+  function loadHubProfile() {
+    try {
+      const params = new URLSearchParams(location.search);
+      const qName = (params.get('name') || '').trim();
+      const qWho = (params.get('who') || '').trim();
+      const lsName = (localStorage.getItem('mouse_hub_name') || localStorage.getItem('mouse_feeder_student_name') || '').trim();
+      let hubWho = null;
+      try {
+        hubWho = JSON.parse(localStorage.getItem('mouse_hub_who') || localStorage.getItem('mouse_feeder_who') || 'null');
+      } catch (_) {}
+      const name = qName || lsName;
+      if (name && $('studentName')) {
+        $('studentName').value = name;
+        state.studentName = name;
+      }
+      let who = null;
+      if (qWho) who = IDS.find(p => p.id === qWho) || null;
+      if (!who && hubWho?.id) who = IDS.find(p => p.id === hubWho.id) || hubWho;
+      if (who) {
+        state.who = who;
+        const btn = $('btnToLevels');
+        if (btn) { btn.disabled = false; btn.removeAttribute('disabled'); }
+      }
+    } catch (_) {}
+  }
+  loadHubProfile();
   renderIds();
   // unlock audio on first gesture
   window.addEventListener('pointerdown', () => { try { ctx(); } catch(_){} }, { once: true });
