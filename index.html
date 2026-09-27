@@ -18,38 +18,56 @@ html, body {
   touch-action: manipulation;
   overflow: hidden;
 }
-button { font: inherit; border: none; cursor: pointer; }
-.screen { display: none; height: 100%; width: 100%; flex-direction: column; }
+button { font: inherit; border: none; cursor: pointer; position: relative; z-index: 1; }
+.screen { display: none; height: 100%; width: 100%; flex-direction: column; min-height: 0; }
 .screen.on { display: flex; }
 
 /* Hub */
 .hub {
   align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 16px 16px 28px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.hub-cta {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  width: min(420px, 92vw);
+  padding: 12px 0 8px;
+  background: linear-gradient(180deg, rgba(255,228,241,0), rgba(255,228,241,.95) 35%, rgba(255,233,201,.98));
+  display: flex;
   justify-content: center;
-  gap: 18px;
-  padding: 24px;
 }
 .logo {
-  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
   font-weight: 900;
   text-align: center;
   line-height: 1.2;
+  flex-shrink: 0;
 }
 .sub {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   opacity: .75;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 .id-grid, .lv-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(90px, 140px));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(72px, 120px));
+  gap: 10px;
   justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
 .id-card, .lv-card {
-  min-height: 110px;
-  border-radius: 22px;
+  min-height: 88px;
+  border-radius: 18px;
   border: 4px solid rgba(255,107,157,.35);
   background: #fff;
   box-shadow: 0 8px 24px rgba(74,44,90,.12);
@@ -57,17 +75,24 @@ button { font: inherit; border: none; cursor: pointer; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   font-weight: 900;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   transition: transform .12s, border-color .12s, box-shadow .12s;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 2;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .id-card:hover, .lv-card:hover { transform: translateY(-2px); }
+.id-card:active, .lv-card:active { transform: scale(0.97); }
 .id-card.sel, .lv-card.done {
   border-color: #22c55e;
   box-shadow: 0 0 0 4px rgba(34,197,94,.25);
 }
-.id-card .emoji, .lv-card .emoji { font-size: 2.4rem; line-height: 1; }
+.id-card .emoji, .lv-card .emoji { font-size: 2rem; line-height: 1; pointer-events: none; }
+.id-card span, .lv-card span { pointer-events: none; }
 .lv-card { min-height: 130px; }
 .lv-card.lock { opacity: .45; filter: grayscale(.4); cursor: not-allowed; }
 .lv-card .tag {
@@ -336,6 +361,7 @@ button { font: inherit; border: none; cursor: pointer; }
 }
 .confetti i {
   position: absolute; top: -20px; width: 12px; height: 18px; border-radius: 3px;
+  pointer-events: none;
   animation: fall linear forwards;
 }
 @keyframes fall {
@@ -360,8 +386,11 @@ button { font: inherit; border: none; cursor: pointer; }
   width: min(360px, 88vw);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   align-items: stretch;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
 .name-field label {
   font-weight: 900;
@@ -413,7 +442,9 @@ button { font: inherit; border: none; cursor: pointer; }
     <input id="studentName" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="例如：小明" value="">
     <div class="hint-mini">唔填都可以玩</div>
   </div>
-  <button class="btn" id="btnToLevels" disabled>去餵貓</button>
+  <div class="hub-cta">
+    <button class="btn" id="btnToLevels" type="button" disabled>去餵貓</button>
+  </div>
 </section>
 
 <!-- Levels -->
@@ -644,21 +675,48 @@ button { font: inherit; border: none; cursor: pointer; }
     state.studentName = ($('studentName')?.value || '').trim();
   }
 
+  function pickIdentity(p) {
+    state.who = p;
+    syncNameFromInput();
+    // leave IME/input focus so next click is clean
+    try { $('studentName')?.blur(); } catch (_) {}
+    renderIds();
+    const btn = $('btnToLevels');
+    if (btn) {
+      btn.disabled = false;
+      btn.removeAttribute('disabled');
+    }
+    tone(660, .08);
+    speak(p.name);
+  }
+
   // Identity
   function renderIds() {
     const g = $('idGrid');
+    if (!g) return;
     g.innerHTML = '';
     IDS.forEach(p => {
       const b = document.createElement('button');
+      b.type = 'button';
       b.className = 'id-card' + (state.who?.id === p.id ? ' sel' : '');
+      b.setAttribute('aria-label', p.name);
       b.innerHTML = `<span class="emoji">${p.emoji}</span><span>${p.name}</span>`;
-      b.onclick = () => {
-        state.who = p;
-        renderIds();
-        $('btnToLevels').disabled = false;
-        tone(660, .08);
-        speak(p.name);
+      const go = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        // pointerup + click 會連打兩次
+        const now = Date.now();
+        if (now - (b._lastPick || 0) < 350) return;
+        b._lastPick = now;
+        pickIdentity(p);
       };
+      b.addEventListener('pointerup', (e) => {
+        if (e.button != null && e.button !== 0) return;
+        go(e);
+      });
+      b.addEventListener('click', go);
       g.appendChild(b);
     });
   }
