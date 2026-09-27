@@ -382,6 +382,127 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
 }
 .teacher summary { cursor: pointer; list-style: none; }
 .teacher label { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+
+/* Certificate */
+.cert-screen {
+  background: linear-gradient(160deg, #FFF7E6, #FFE4F1 50%, #E8F8FF);
+  overflow: auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 16px;
+}
+.cert-sheet {
+  width: min(920px, 96vw);
+  background: #fff;
+  border: 8px solid #F5C542;
+  border-radius: 28px;
+  box-shadow: 0 16px 40px rgba(74,44,90,.15), inset 0 0 0 4px #FFE08A;
+  padding: 22px 28px 26px;
+  text-align: center;
+  position: relative;
+}
+.cert-sheet[data-tier="bronze"] { border-color: #CD7F32; box-shadow: 0 16px 40px rgba(74,44,90,.15), inset 0 0 0 4px #E8B87A; }
+.cert-sheet[data-tier="silver"] { border-color: #A8B4C0; box-shadow: 0 16px 40px rgba(74,44,90,.15), inset 0 0 0 4px #D7DEE6; }
+.cert-sheet[data-tier="gold"] { border-color: #F5C542; box-shadow: 0 16px 40px rgba(74,44,90,.15), inset 0 0 0 4px #FFE08A; }
+.cert-medal {
+  font-size: clamp(3.5rem, 10vw, 5.5rem);
+  line-height: 1;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.12));
+}
+.cert-title {
+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
+  font-weight: 900;
+  margin: 6px 0 4px;
+  color: #4A2C5A;
+}
+.cert-tier-label {
+  display: inline-block;
+  font-weight: 900;
+  font-size: 1.25rem;
+  padding: 6px 16px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+.cert-sheet[data-tier="bronze"] .cert-tier-label { background: #F3E0C7; color: #8B5A2B; }
+.cert-sheet[data-tier="silver"] .cert-tier-label { background: #E8EEF3; color: #5B6B7A; }
+.cert-sheet[data-tier="gold"] .cert-tier-label { background: #FFF3C4; color: #9A6B00; }
+.cert-name {
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 900;
+  margin: 8px 0 14px;
+}
+.cert-name .av { font-size: 1.4em; vertical-align: middle; }
+.cert-skills {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+.cert-skill {
+  border-radius: 18px;
+  border: 3px solid #eee;
+  background: #f7f7f7;
+  padding: 12px 8px;
+  font-weight: 900;
+  opacity: .45;
+  filter: grayscale(.8);
+}
+.cert-skill.on {
+  opacity: 1;
+  filter: none;
+  border-color: #69F0AE;
+  background: #E8FFF3;
+  box-shadow: 0 0 0 3px rgba(105,240,174,.25);
+}
+.cert-skill .ic { font-size: 2rem; display: block; line-height: 1.2; }
+.cert-skill .lb { font-size: 1rem; }
+.cert-line {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #C2185B;
+  margin: 8px 0;
+}
+.cert-date {
+  font-weight: 800;
+  opacity: .7;
+  margin-top: 4px;
+}
+.cert-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 8px; }
+.cert-new-badge {
+  position: absolute;
+  top: 12px; right: 16px;
+  background: #FF6B9D;
+  color: #fff;
+  font-weight: 900;
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: none;
+}
+.cert-sheet.is-new .cert-new-badge { display: block; animation: bounce .6s ease; }
+
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  html, body {
+    background: #fff !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .teacher, .toast, .confetti, .overlay,
+  #s-id, #s-lv, #s-play, .cert-actions, .cert-new-badge { display: none !important; }
+  #s-cert.screen { display: flex !important; padding: 0 !important; background: #fff !important; overflow: visible !important; height: auto !important; }
+  .cert-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    border-width: 6px !important;
+    break-inside: avoid;
+  }
+}
+
+@media (max-width: 700px) {
+  .cert-skills { grid-template-columns: repeat(2, 1fr); }
+}
 .name-field {
   width: min(360px, 88vw);
   display: flex;
@@ -453,7 +574,31 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
   <div class="sub" id="lvWho"></div>
   <div class="lv-grid" id="lvGrid"></div>
   <div class="row">
-    <button class="btn ghost" id="btnBackId">返身份卡</button>
+    <button class="btn ghost" id="btnBackId" type="button">返身份卡</button>
+    <button class="btn" id="btnCertMap" type="button" style="display:none">我嘅證書</button>
+  </div>
+</section>
+
+<!-- Cert -->
+<section id="s-cert" class="screen cert-screen">
+  <div class="cert-sheet" id="certSheet" data-tier="bronze">
+    <div class="cert-new-badge">新證書！</div>
+    <div class="cert-medal" id="certMedal">🥉</div>
+    <div class="cert-title">滑鼠小達人證書</div>
+    <div class="cert-tier-label" id="certTierLabel">銅獎</div>
+    <div class="cert-name" id="certName"><span class="av">🐱</span> 同學</div>
+    <div class="cert-skills" id="certSkills">
+      <div class="cert-skill" data-sk="1"><span class="ic">👆</span><span class="lb">左掣</span></div>
+      <div class="cert-skill" data-sk="2"><span class="ic">✋</span><span class="lb">拖曳</span></div>
+      <div class="cert-skill" data-sk="3"><span class="ic">🖱️</span><span class="lb">右掣</span></div>
+      <div class="cert-skill" data-sk="4"><span class="ic">🍽️</span><span class="lb">混合</span></div>
+    </div>
+    <div class="cert-line" id="certPraise">你係滑鼠小達人！</div>
+    <div class="cert-date" id="certDate"></div>
+  </div>
+  <div class="cert-actions row">
+    <button class="btn" id="btnPrintCert" type="button">🖨 列印</button>
+    <button class="btn ghost" id="btnCertReplay" type="button">🏠 再玩</button>
   </div>
 </section>
 
@@ -489,9 +634,10 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     <h2 id="winTitle">做得好！</h2>
     <p id="winMsg">貓貓食飽啦</p>
     <div class="row">
-      <button class="btn ghost" id="btnRetry">再玩</button>
-      <button class="btn" id="btnNext">下一關</button>
-      <button class="btn ghost" id="btnToMap">關卡</button>
+      <button class="btn ghost" id="btnRetry" type="button">再玩</button>
+      <button class="btn" id="btnNext" type="button">下一關</button>
+      <button class="btn" id="btnWinCert" type="button" style="display:none">看證書</button>
+      <button class="btn ghost" id="btnToMap" type="button">關卡</button>
     </div>
   </div>
 </div>
@@ -584,8 +730,17 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     level: null,
     progress: 0,
     done: JSON.parse(localStorage.getItem('mouse_feeder_done') || '{}'),
+    bestTier: localStorage.getItem('mouse_feeder_tier') || '',
     mixStep: 0,
-    dragging: null
+    dragging: null,
+    pendingCertTier: null
+  };
+
+  const TIER_RANK = { '': 0, bronze: 1, silver: 2, gold: 3 };
+  const TIER_META = {
+    bronze: { medal: '🥉', label: '銅獎', praise: '你識用左掣喇！' },
+    silver: { medal: '🥈', label: '銀獎', praise: '左掣、拖曳、右掣都識！' },
+    gold:   { medal: '🥇', label: '金獎', praise: '你係滑鼠小達人！' }
   };
 
   const $ = (id) => document.getElementById(id);
@@ -736,6 +891,7 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     LEVELS.forEach(lv => {
       const open = unlocked(lv.id);
       const b = document.createElement('button');
+      b.type = 'button';
       b.className = 'lv-card' + (state.done[lv.id] ? ' done' : '') + (open ? '' : ' lock');
       b.innerHTML = `<span class="emoji">${lv.emoji}</span><span>${lv.name}</span><span class="tag">${lv.tag}${state.done[lv.id] ? ' ✓' : ''}</span>`;
       b.onclick = () => {
@@ -744,6 +900,72 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
       };
       g.appendChild(b);
     });
+    const tier = currentTier();
+    const btnC = $('btnCertMap');
+    if (btnC) {
+      btnC.style.display = tier ? '' : 'none';
+      btnC.textContent = tier ? `我嘅證書 ${TIER_META[tier].medal}` : '我嘅證書';
+    }
+  }
+
+  function currentTier() {
+    const d = state.done;
+    if (d[1] && d[2] && d[3] && d[4]) return 'gold';
+    if (d[1] && d[2] && d[3]) return 'silver';
+    if (d[1]) return 'bronze';
+    return '';
+  }
+
+  function todayStr() {
+    const n = new Date();
+    return `${n.getFullYear()}年${n.getMonth() + 1}月${n.getDate()}日`;
+  }
+
+  function fillCert(tier, isNew) {
+    const t = tier || currentTier() || 'bronze';
+    const meta = TIER_META[t] || TIER_META.bronze;
+    const sheet = $('certSheet');
+    sheet.dataset.tier = t;
+    sheet.classList.toggle('is-new', !!isNew);
+    $('certMedal').textContent = meta.medal;
+    $('certTierLabel').textContent = meta.label;
+    $('certPraise').textContent = meta.praise;
+    $('certDate').textContent = todayStr();
+    const emoji = state.who?.emoji || '🐱';
+    $('certName').innerHTML = `<span class="av">${emoji}</span> ${displayName()}`;
+    document.querySelectorAll('#certSkills .cert-skill').forEach(el => {
+      const id = el.getAttribute('data-sk');
+      el.classList.toggle('on', !!state.done[id]);
+    });
+  }
+
+  function showCert(tier, isNew) {
+    syncNameFromInput();
+    const t = tier || currentTier();
+    if (!t) {
+      toast('完成關卡先有證書', true);
+      return;
+    }
+    fillCert(t, isNew);
+    $('win').classList.remove('on');
+    showScreen('s-cert');
+    if (isNew) {
+      confettiBurst();
+      sfxWin();
+      speak(TIER_META[t].label);
+    }
+  }
+
+  /** After a level clear: upgrade tier? return new tier or null */
+  function checkTierUpgrade() {
+    const now = currentTier();
+    const prev = state.bestTier || '';
+    if (TIER_RANK[now] > TIER_RANK[prev]) {
+      state.bestTier = now;
+      localStorage.setItem('mouse_feeder_tier', now);
+      return now;
+    }
+    return null;
   }
 
   function setProgress(n, need) {
@@ -1098,11 +1320,20 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     cat.classList.add('happy');
     state.done[state.level.id] = true;
     localStorage.setItem('mouse_feeder_done', JSON.stringify(state.done));
-    $('winStars').textContent = '⭐⭐⭐';
-    $('winTitle').textContent = '得唔得！';
+    const upgraded = checkTierUpgrade();
+    state.pendingCertTier = upgraded;
+    $('winStars').textContent = upgraded
+      ? (TIER_META[upgraded].medal + TIER_META[upgraded].medal + TIER_META[upgraded].medal)
+      : '⭐⭐⭐';
+    $('winTitle').textContent = upgraded ? `獲得${TIER_META[upgraded].label}！` : '得唔得！';
     $('winMsg').textContent = `${displayName()} · ${state.level.name} 完成 · ${state.level.tag}`;
+    const btnCert = $('btnWinCert');
+    if (btnCert) {
+      btnCert.style.display = currentTier() ? '' : 'none';
+      btnCert.textContent = upgraded ? `看${TIER_META[upgraded].label}證書` : '看證書';
+    }
     $('win').classList.add('on');
-    speak('做得好');
+    speak(upgraded ? TIER_META[upgraded].label : '做得好');
     const next = LEVELS.find(l => l.id === state.level.id + 1);
     $('btnNext').style.display = next ? '' : 'none';
   }
@@ -1115,7 +1346,6 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     speak('選關卡');
   };
   $('studentName').addEventListener('input', syncNameFromInput);
-  // allow typing without blocking SEN global select lock
   $('studentName').addEventListener('keydown', (e) => e.stopPropagation());
   $('btnBackId').onclick = () => showScreen('s-id');
   $('btnHome').onclick = () => { $('win').classList.remove('on'); renderLevels(); showScreen('s-lv'); };
@@ -1127,6 +1357,13 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     else { renderLevels(); showScreen('s-lv'); }
   };
   $('btnToMap').onclick = () => { $('win').classList.remove('on'); renderLevels(); showScreen('s-lv'); };
+  $('btnWinCert').onclick = () => {
+    showCert(state.pendingCertTier || currentTier(), !!state.pendingCertTier);
+    state.pendingCertTier = null;
+  };
+  $('btnCertMap').onclick = () => showCert(currentTier(), false);
+  $('btnPrintCert').onclick = () => window.print();
+  $('btnCertReplay').onclick = () => { renderLevels(); showScreen('s-lv'); };
   $('chkGuide').onchange = () => {
     const g = $('guide');
     if (g) g.style.display = $('chkGuide').checked ? 'block' : 'none';
