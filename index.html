@@ -1322,6 +1322,18 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     localStorage.setItem('mouse_feeder_done', JSON.stringify(state.done));
     const upgraded = checkTierUpgrade();
     state.pendingCertTier = upgraded;
+    // hub pet + sticker (once sticker, XP every clear)
+    try {
+      const stKey = 'mouse_hub_stickers';
+      const st = JSON.parse(localStorage.getItem(stKey) || '{}');
+      st.feeder = '🐟';
+      localStorage.setItem(stKey, JSON.stringify(st));
+      const petKey = 'mouse_hub_pet';
+      let pet = JSON.parse(localStorage.getItem(petKey) || '{"xp":0,"level":1}');
+      pet.xp = (Number(pet.xp) || 0) + 1;
+      pet.level = Math.min(10, 1 + Math.floor(pet.xp / 3));
+      localStorage.setItem(petKey, JSON.stringify(pet));
+    } catch (_) {}
     $('winStars').textContent = upgraded
       ? (TIER_META[upgraded].medal + TIER_META[upgraded].medal + TIER_META[upgraded].medal)
       : '⭐⭐⭐';
