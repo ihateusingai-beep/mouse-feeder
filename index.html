@@ -638,6 +638,7 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
       <button class="btn" id="btnNext" type="button">下一關</button>
       <button class="btn" id="btnWinCert" type="button" style="display:none">看證書</button>
       <button class="btn ghost" id="btnToMap" type="button">關卡</button>
+      <button class="btn ghost" id="btnToHub" type="button">主頁</button>
     </div>
   </div>
 </div>
@@ -1322,17 +1323,21 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     localStorage.setItem('mouse_feeder_done', JSON.stringify(state.done));
     const upgraded = checkTierUpgrade();
     state.pendingCertTier = upgraded;
-    // hub pet + sticker (once sticker, XP every clear)
+    // hub sticker + XP only first clear (anti-farm)
     try {
       const stKey = 'mouse_hub_stickers';
       const st = JSON.parse(localStorage.getItem(stKey) || '{}');
+      const first = !st.feeder;
       st.feeder = '🐟';
       localStorage.setItem(stKey, JSON.stringify(st));
-      const petKey = 'mouse_hub_pet';
-      let pet = JSON.parse(localStorage.getItem(petKey) || '{"xp":0,"level":1}');
-      pet.xp = (Number(pet.xp) || 0) + 1;
-      pet.level = Math.min(10, 1 + Math.floor(pet.xp / 3));
-      localStorage.setItem(petKey, JSON.stringify(pet));
+      if (first) {
+        const petKey = 'mouse_hub_pet';
+        let pet = JSON.parse(localStorage.getItem(petKey) || '{"xp":0,"level":1}');
+        pet.xp = (Number(pet.xp) || 0) + 1;
+        pet.level = Math.min(10, 1 + Math.floor(pet.xp / 3));
+        localStorage.setItem(petKey, JSON.stringify(pet));
+      }
+      state.hubWonReady = true;
     } catch (_) {}
     $('winStars').textContent = upgraded
       ? (TIER_META[upgraded].medal + TIER_META[upgraded].medal + TIER_META[upgraded].medal)
@@ -1369,6 +1374,10 @@ button { font: inherit; border: none; cursor: pointer; position: relative; z-ind
     else { renderLevels(); showScreen('s-lv'); }
   };
   $('btnToMap').onclick = () => { $('win').classList.remove('on'); renderLevels(); showScreen('s-lv'); };
+  $('btnToHub').onclick = () => {
+    const base = 'https://ihateusingai-beep.github.io/mouse-master-hub/';
+    location.href = state.hubWonReady ? (base + '?won=feeder') : base;
+  };
   $('btnWinCert').onclick = () => {
     showCert(state.pendingCertTier || currentTier(), !!state.pendingCertTier);
     state.pendingCertTier = null;
